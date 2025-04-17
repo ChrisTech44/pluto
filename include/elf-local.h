@@ -1,3 +1,6 @@
+#ifndef ELF_LOCAL_H
+#define ELF_LOCAL_H
+
 typedef struct Fhdr Fhdr;
 
 /*
@@ -41,6 +44,7 @@ struct Fhdr {
 	uint32_t	name;
 	uint64_t	offset;
 	uint64_t	size;
+	uint64_t    addr; /*Virtual address of .text section*/
 
 	/* String Table */
 	uint32_t	strndxsize;	/* String Table size */
@@ -62,3 +66,6 @@ char* elfosabi(uint8_t);
 char* elftype(uint16_t);
 char* elfmachine(uint16_t);
 char* elfversion(uint8_t);
+
+
+#endif

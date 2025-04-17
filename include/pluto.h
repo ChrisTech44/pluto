@@ -9,6 +9,21 @@
 #include<instruction_formats.h>
 #include<stdbool.h>
 
+#include "elf-local.h"
+#include "symbols.h"
+
+
+/*
+* RV32I 40 Instructions--------------
+*/
+
+/*Helper methods*/
+static void 
+process_instruction32(uint32_t*, enum instruction32_format);
+static inline uint8_t 
+get_opcode32(uint32_t);
+
+
 /*R-type*/
 static void 
 process_r_instruction(uint32_t);
@@ -31,17 +46,36 @@ process_jalr_instruction(uint32_t, uint8_t, uint8_t);
 static void 
 process_s_instruction(uint32_t);
 
-/*Helper Functions*/
-static void 
-process_instruction(uint32_t*, enum instruction_format);
-static inline uint8_t 
-get_opcode(uint32_t);
+/*B-type*/
+static void
+process_b_instruction(uint32_t);
+
+/*U-type*/
+static void
+process_u_instruction(uint32_t);
+
+/*J-type*/
+static void
+process_j_instruction(uint32_t);
+
+
+/*
+* Compressed Instructions--------------
+*/
+// static void
+// process_compressed_instruction(uint32_t);
+// static void 
+// process_instruction16(uint16_t*, enum instruction32_format);
+
+
+/*
+*Helper Functions
+*/
 static const char* 
 get_register_name(uint8_t);
-static enum instruction_format 
-determine_instruction_format(uint32_t);
+static Format32 
+determine_instruction_format32(uint32_t);
 static void
 print_err(const char*);
-
 
 

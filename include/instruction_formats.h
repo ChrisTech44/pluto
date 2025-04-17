@@ -60,7 +60,9 @@
 #define REG_T5       30 // X30 (Temporary register 5)
 #define REG_T6       31 // X31 (Temporary register 6)
 
-
+/*
+* RV32I 40 Instructions--------------
+*/
 /*func3 and func7 codes for R-type instructions*/
 #define ADD_FUNC3 0x0 //Same as SUB
 #define XOR_FUNC3 0x4
@@ -111,12 +113,28 @@
 
 
 /*Enumeration for isntruction formats*/
-enum instruction_format {
+typedef enum instruction32_format {
     R, 
     I, 
     S, 
     B, 
     U, 
-    J,
-    UNKNOWN
-};
+    J
+} Format32;
+
+
+/*
+*16 Bit Compressed Instructions ----------------
+*/
+/*Enumeration for isntruction formats*/
+typedef enum instruction16_format {
+    CR, 
+    CI, 
+    CSS, 
+    CIW, 
+    CL, 
+    CS,
+    CB,
+    CJ
+} Format16;
+

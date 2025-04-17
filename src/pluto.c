@@ -4,7 +4,6 @@ static void
 print_err(const char * msg) {
     dprintf(STDERR_FILENO, "%s\n", msg);
 }
-
 /*Helper function to print the binary of an instructioin*/
 void print_binary(uint32_t num) {
     // Iterate through each of the 32 bits
@@ -17,6 +16,10 @@ void print_binary(uint32_t num) {
         }
     }
     printf("        ");
+}
+
+static inline uint8_t get_opcode32(uint32_t instruction) {
+    return 0x7F & instruction;
 }
 
 static const char* 
@@ -197,9 +200,9 @@ process_jalr_instruction(uint32_t instruction, uint8_t rs1, uint8_t rd) {
     }
 
     if (is_signed) {
-        printf("%s %s, %d(%s)\n", "jalr", get_register_name(rd), s_immediate << 1, get_register_name(rs1));
+        printf("%s %s, %d(%s)\n", "jalr", get_register_name(rd), s_immediate, get_register_name(rs1));
     } else {
-        printf("%s %s, %u(%s)\n", "jalr", get_register_name(rd), us_immediate << 1, get_register_name(rs1));
+        printf("%s %s, %u(%s)\n", "jalr", get_register_name(rd), us_immediate, get_register_name(rs1));
     }
 
 }
@@ -209,7 +212,7 @@ process_i_instruction(uint32_t instruction) {
     uint8_t func3 = ((0x7000 & instruction) >> 12);
     uint8_t rs1 = ((0xF8000 & instruction) >> 15);
 
-    uint8_t opcode = get_opcode(instruction);
+    uint8_t opcode = get_opcode32(instruction);
 
     if (opcode == I_OPCODE) {
         process_reg_i_instruction(instruction, func3, rs1, rd);
@@ -317,7 +320,7 @@ process_b_instruction(uint32_t instruction) {
 }
 static void
 process_u_instruction(uint32_t instruction)  {
-    int8_t opcode = get_opcode(instruction);
+    int8_t opcode = get_opcode32(instruction);
     uint8_t rd = ((0xF80 & instruction) >> 7);
     char* instruction_name;
 
@@ -349,7 +352,7 @@ process_j_instruction(uint32_t instruction) {
     uint32_t b19_to_12 = ((0x000FF000 & instruction));
 
     if (b20) {
-        int32_t s_immediate = b20 | b19_to_12 | b11 | b10_to_1;
+        int32_t s_immediate = b20 | b19_to_12 | b11 | b10_to_1 | 0xFFF00000;
         printf("%s %s, %d\n", instruction_name, get_register_name(rd), s_immediate);
     } else {
         b19_to_12 = b20 | b19_to_12 | b11 | b10_to_1;
@@ -358,11 +361,10 @@ process_j_instruction(uint32_t instruction) {
     }
 }
 
-
 static void 
-process_instruction(uint32_t* instruction_ptr, enum instruction_format format) {
-    printf("%p:     ", instruction_ptr);
-    printf("%08x     ", *instruction_ptr);
+process_instruction32(uint32_t* instruction_ptr, enum instruction32_format format) {
+    // printf("%p:     ", instruction_ptr);
+    // printf("%08x     ", *instruction_ptr);
 
     if (format == R) {
         process_r_instruction(*instruction_ptr);
@@ -379,13 +381,22 @@ process_instruction(uint32_t* instruction_ptr, enum instruction_format format) {
     }
 }
 
-static inline uint8_t get_opcode(uint32_t instruction) {
-    return 0x7F & instruction;
-}
+// static void 
+// process_instruction16(uint16_t*, enum instruction32_format) {
 
-static enum instruction_format
-determine_instruction_format(uint32_t instruction) {
-    uint8_t opcode = get_opcode(instruction);
+// }
+// static inline uint8_t get_opcode16(uint32_t instruction) {
+//     return 0x3 & instruction;
+// }
+
+// static Format16 determine_instruction_format16(uint32_t instruction) {
+//     uint8_t opcode = get_opcode16(instruction);
+//     uint8_t func3 = (0xF000 & instruction);
+// }
+
+static Format32
+determine_instruction_format32(uint32_t instruction) {
+    uint8_t opcode = get_opcode32(instruction);
     switch (opcode) {
         case R_OPCODE:
             return R;
@@ -409,7 +420,7 @@ determine_instruction_format(uint32_t instruction) {
             return U;
         default:
             printf("Unknown opcode found\n");
-            return UNKNOWN;
+            _exit(-1);
     }
 }   
 
@@ -421,10 +432,13 @@ main(int argc, char** argv) {
         return -1;
     }
 
-    Fhdr header; /*File header*/
+    
+
+    /*Load and process .text section*/
+    Fhdr text_header; /*File header*/
     FILE* file; /*File to read information from*/
-    uint8_t* buffer; /*Buffer holding read data*/
-    uint64_t length; /*Length read*/
+    uint8_t* text_buffer; /*Buffer holding read data*/
+    uint64_t text_length; /*Length read*/
     
     file = fopen(argv[1], "r"); /*Open file*/
     
@@ -433,19 +447,48 @@ main(int argc, char** argv) {
         return -1;
     }
 
-    buffer = readelfsection(file, ".text", &length, &header);
-    uint32_t* word_buffer = (uint32_t *) buffer;
-    uint64_t instruction_pos = 0;
-    while (instruction_pos < length) {
+    /*Load function symbols*/
+    load_symbols(file);
 
-        enum instruction_format i_type = determine_instruction_format(*word_buffer);
-        process_instruction(word_buffer, i_type);
-        word_buffer++;
-        instruction_pos += 4;
+    /*Process instructions*/
+    text_buffer = readelfsection(file, ".text", &text_length, &text_header);
+    // uint64_t current_address = text_header.addr;
+
+    uint32_t* word_buffer = (uint32_t *) text_buffer;
+
+    Symbol* current_symbol = get_next_symbol(NULL);
+    while (current_symbol != NULL) {
+        printf("\n\n\n%s\n", current_symbol->name);
+        for(size_t i = 0; i < current_symbol->size; i += 4) {
+            Format32 i_type = determine_instruction_format32(*word_buffer);
+            process_instruction32((uint32_t*) word_buffer, i_type);
+            word_buffer++;
+        }
+        current_symbol = get_next_symbol(current_symbol);
     }
+
+
+
+    /*Assuming RV32I fixed length isntructions*/
+    // uint64_t instruction_pos = 0;
+    // while (instruction_pos < text_length) {
+    //     bool is_32 = (0x3 & *hword_buffer) == 0x3;
+    //     if (is_32) {
+    //         Format32 i_type = determine_instruction_format32(*hword_buffer);
+    //         process_instruction32((uint32_t*) hword_buffer, i_type);
+    //         hword_buffer += 2;
+    //         instruction_pos += 4;
+    //     } else {
+    //         printf("Unknown instruction identified\n");
+    //         abort();
+    //         // Format16 i_type = determine_instruction_format16(*hword_buffer);
+    //         // process_instruction16((uint32_t*) hword_buffer, i_type);
+    //         // hword_buffer += 1;
+    //         // instruction_pos += 2;
+    //     } 
+    // }
     
-    free(buffer);
-    
+    free(text_buffer);
     int ret_val = fclose(file);
     if (ret_val != 0) {
         printf("%s\n", strerror(errno)); 
