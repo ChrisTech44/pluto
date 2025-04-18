@@ -362,9 +362,9 @@ process_j_instruction(uint32_t instruction) {
 }
 
 static void 
-process_instruction32(uint32_t* instruction_ptr, enum instruction32_format format) {
-    // printf("%p:     ", instruction_ptr);
-    // printf("%08x     ", *instruction_ptr);
+process_instruction32(uint32_t* instruction_ptr, enum instruction32_format format, uintptr_t address) {
+    printf("    0x%lx:     ", address);
+    printf("%08x     ", *instruction_ptr);
 
     if (format == R) {
         process_r_instruction(*instruction_ptr);
@@ -419,12 +419,13 @@ determine_instruction_format32(uint32_t instruction) {
         case LUI_OPCODE:
             return U;
         default:
+            printf("INSTRUCTION: %08x\n", instruction);
             printf("Unknown opcode found\n");
-            _exit(-1);
+            _exit(0);
     }
 }   
 
-int 
+int  
 main(int argc, char** argv) {    
 
     if (argc != 2) {
@@ -452,17 +453,19 @@ main(int argc, char** argv) {
 
     /*Process instructions*/
     text_buffer = readelfsection(file, ".text", &text_length, &text_header);
-    // uint64_t current_address = text_header.addr;
 
-    uint32_t* word_buffer = (uint32_t *) text_buffer;
+    uint32_t* word_buffer;
 
     Symbol* current_symbol = get_next_symbol(NULL);
     while (current_symbol != NULL) {
-        printf("\n\n\n%s\n", current_symbol->name);
+        uint32_t pos = 0;
+        word_buffer = (uint32_t*) (text_buffer + current_symbol->address - text_header.addr);
+        printf("\n0x%lx: <%s>\n", current_symbol->address, current_symbol->name);
         for(size_t i = 0; i < current_symbol->size; i += 4) {
             Format32 i_type = determine_instruction_format32(*word_buffer);
-            process_instruction32((uint32_t*) word_buffer, i_type);
+            process_instruction32((uint32_t*) word_buffer, i_type, current_symbol->address + pos);
             word_buffer++;
+            pos += 4;
         }
         current_symbol = get_next_symbol(current_symbol);
     }

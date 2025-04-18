@@ -33,6 +33,39 @@ static void ordered_insert(Symbol* symbol) {
 }
 
 /*
+* Print the symbols
+*/
+static void __attribute__((unused)) print_symbols() {
+    Element* curr = symbols.head.next;
+    Element* tail = &symbols.tail;
+
+    while (curr != tail) {
+        Symbol* sym = get_entry(curr, Symbol, elem);
+        printf("%s at address %lu with size %ld ending at %ld\n", sym->name, sym->address, sym->size, sym->address + sym->size);
+        curr = curr->next;
+    }
+
+}
+
+/*
+* Iterate through the list and check symbols
+*/
+static void update_sizes() {
+    assert(symbols.head.next != &symbols.tail && "No symbols loaded");
+    Element* curr = symbols.head.next;
+    Element* tail = &symbols.tail;
+
+    while (curr->next != tail && curr != tail) {
+        Symbol* sym = get_entry(curr, Symbol, elem);
+        Symbol* next = get_entry(curr->next, Symbol, elem);
+        if (sym->size == 0) {
+            sym->size = next->address - sym->address;
+        }
+        curr = curr->next;
+    }
+}
+
+/*
 * load the text symbols from a given ELF file
 * file = pointer to the ELF file
 */
@@ -75,18 +108,11 @@ void load_symbols(FILE* file) {
         ordered_insert(symbol);
     }
 
-    // Element* curr = symbols.head.next;
-    // Element* tail = &symbols.tail;
-
-    // while (curr != tail) {
-    //     Symbol* sym = get_entry(curr, Symbol, elem);
-    //     printf("%s at address %lu with size %ld\n", sym->name, sym->address, sym->size);
-    //     curr = curr->next;
-    // }
-
     //Free buffer
     free(buffer);
     free(symbol_names);
+    //Update the sizes so they reflect address differences
+    update_sizes();
 }
 
 /*
@@ -104,8 +130,14 @@ Symbol* get_next_symbol(Symbol* sym) {
     Element* next = sym->elem.next;
 
     if (next == &symbols.tail) {
+
         return NULL;
     }
 
-    return get_entry(next, Symbol, elem);
+    Symbol* ret = get_entry(next, Symbol, elem);
+    if (ret->address == sym->address) {
+        return get_next_symbol(ret);
+    }
+
+    return ret;
 }
