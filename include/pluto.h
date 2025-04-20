@@ -19,7 +19,7 @@
 
 /*Helper methods*/
 static void 
-process_instruction32(uint32_t*, enum instruction32_format);
+process_instruction32(uint32_t*, enum instruction32_format, uintptr_t);
 static inline uint8_t 
 get_opcode32(uint32_t);
 
@@ -48,7 +48,7 @@ process_s_instruction(uint32_t);
 
 /*B-type*/
 static void
-process_b_instruction(uint32_t);
+process_b_instruction(uint32_t, uintptr_t);
 
 /*U-type*/
 static void
@@ -56,7 +56,7 @@ process_u_instruction(uint32_t);
 
 /*J-type*/
 static void
-process_j_instruction(uint32_t);
+process_j_instruction(uint32_t, uintptr_t);
 
 
 /*

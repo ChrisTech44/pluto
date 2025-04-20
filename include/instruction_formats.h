@@ -88,7 +88,7 @@
 #define SRLI_FUNC3 0x5
 #define SLTI_FUNC3 0x2
 #define SLTIU_FUNC3 0x3
-//Load
+//Load 
 #define LB_FUNC3 0x0
 #define LH_FUNC3 0x1
 #define LW_FUNC3 0x2
