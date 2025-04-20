@@ -278,7 +278,7 @@ process_s_instruction(uint32_t instruction) {
 }
 
 static void
-process_b_instruction(uint32_t instruction) {
+process_b_instruction(uint32_t instruction, uintptr_t addr) {
     char* instruction_name = NULL;
     uint8_t func3 = ((0x7000 & instruction) >> 12);
     uint8_t rs1 = ((0xF8000 & instruction) >> 15);
@@ -306,16 +306,20 @@ process_b_instruction(uint32_t instruction) {
     int32_t s_immediate = 0;
 
     //Check if signed and extend if necessary
-    if (u_immediate & 0x800) {
+    if (u_immediate & 0x1000) {
         is_signed = true;
         s_immediate = u_immediate;
         s_immediate |= 0xFFFFF000;
     }
 
     if (is_signed) {
-        printf("%s %s, %s, %d\n", instruction_name, get_register_name(rs1), get_register_name(rs2), s_immediate);
+        uintptr_t dest = addr + s_immediate;
+        Symbol* symbol = get_symbol(dest);
+        printf("%s %s, %s, %d <%s+0x%lx>\n", instruction_name, get_register_name(rs1), get_register_name(rs2), s_immediate, symbol->name, dest - symbol->address);
     } else {
-        printf("%s %s, %s, %u\n", instruction_name, get_register_name(rs1), get_register_name(rs2), u_immediate);
+        uintptr_t dest = addr + u_immediate;
+        Symbol* symbol = get_symbol(dest);
+        printf("%s %s, %s, %u <%s+0x%lx>\n", instruction_name, get_register_name(rs1), get_register_name(rs2), u_immediate, symbol->name, dest - symbol->address);
     }
 }
 static void
@@ -343,7 +347,7 @@ process_u_instruction(uint32_t instruction)  {
     }
 }
 static void
-process_j_instruction(uint32_t instruction) {
+process_j_instruction(uint32_t instruction, uintptr_t addr) {
     char* instruction_name = "jal";
     uint8_t rd = ((0xF80 & instruction) >> 7);
     uint32_t b20 = ((0x80000000 & instruction) >> 11);
@@ -353,11 +357,12 @@ process_j_instruction(uint32_t instruction) {
 
     if (b20) {
         int32_t s_immediate = b20 | b19_to_12 | b11 | b10_to_1 | 0xFFF00000;
-        printf("%s %s, %d\n", instruction_name, get_register_name(rd), s_immediate);
+        Symbol* symbol = get_symbol(addr + s_immediate);
+        printf("%s %s, %d <%s>\n", instruction_name, get_register_name(rd), s_immediate, symbol->name);
     } else {
         b19_to_12 = b20 | b19_to_12 | b11 | b10_to_1;
-        printf("%s %s, %u\n", instruction_name, get_register_name(rd), b19_to_12);
-
+        Symbol* symbol = get_symbol(addr + b19_to_12);
+        printf("%s %s, %u  <%s>\n", instruction_name, get_register_name(rd), b19_to_12, symbol->name);
     }
 }
 
@@ -373,11 +378,11 @@ process_instruction32(uint32_t* instruction_ptr, enum instruction32_format forma
     } else if (format == S) {
         process_s_instruction(*instruction_ptr);
     } else if (format == B) {
-        process_b_instruction(*instruction_ptr);
+        process_b_instruction(*instruction_ptr, address);
     } else if (format == U) {
         process_u_instruction(*instruction_ptr);
     } else if (format == J) {
-        process_j_instruction(*instruction_ptr);
+        process_j_instruction(*instruction_ptr, address);
     }
 }
 
@@ -469,27 +474,6 @@ main(int argc, char** argv) {
         }
         current_symbol = get_next_symbol(current_symbol);
     }
-
-
-
-    /*Assuming RV32I fixed length isntructions*/
-    // uint64_t instruction_pos = 0;
-    // while (instruction_pos < text_length) {
-    //     bool is_32 = (0x3 & *hword_buffer) == 0x3;
-    //     if (is_32) {
-    //         Format32 i_type = determine_instruction_format32(*hword_buffer);
-    //         process_instruction32((uint32_t*) hword_buffer, i_type);
-    //         hword_buffer += 2;
-    //         instruction_pos += 4;
-    //     } else {
-    //         printf("Unknown instruction identified\n");
-    //         abort();
-    //         // Format16 i_type = determine_instruction_format16(*hword_buffer);
-    //         // process_instruction16((uint32_t*) hword_buffer, i_type);
-    //         // hword_buffer += 1;
-    //         // instruction_pos += 2;
-    //     } 
-    // }
     
     free(text_buffer);
     int ret_val = fclose(file);
@@ -500,3 +484,4 @@ main(int argc, char** argv) {
 
     return 0;
 }
+

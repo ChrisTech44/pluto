@@ -1,3 +1,8 @@
+/*
+* An simple linked list using an embedded element design
+* @author Christian Franklin 2025
+*/
+
 #include <stdlib.h>
 #include "list.h"
 

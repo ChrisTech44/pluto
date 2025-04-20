@@ -141,3 +141,22 @@ Symbol* get_next_symbol(Symbol* sym) {
 
     return ret;
 }
+
+/*
+* Get the symbol starting at or containing address
+*/
+Symbol* get_symbol(uintptr_t addr) {
+    assert(symbols.head.next != &symbols.tail && "No symbols loaded");
+    Element* curr = symbols.head.next;
+    Element* tail = &symbols.tail;
+    while (curr != tail) {
+        Symbol* sym = get_entry(curr, Symbol, elem);
+        if(addr >= sym->address && addr < sym->address + sym->size) {
+            return sym;
+        }
+        curr = curr->next;
+    }
+
+    printf("No symbol found for destination 0x%lx\n", addr);
+    abort();
+}
