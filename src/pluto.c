@@ -357,12 +357,24 @@ process_j_instruction(uint32_t instruction, uintptr_t addr) {
 
     if (b20) {
         int32_t s_immediate = b20 | b19_to_12 | b11 | b10_to_1 | 0xFFF00000;
-        Symbol* symbol = get_symbol(addr + s_immediate);
-        printf("%s %s, %d <%s>\n", instruction_name, get_register_name(rd), s_immediate, symbol->name);
+        uintptr_t dest = addr + s_immediate;
+        Symbol* symbol = get_symbol(dest);
+
+        if (dest - symbol->address != 0) {
+            printf("%s %s, %d <%s+0x%lx>\n", instruction_name, get_register_name(rd), s_immediate, symbol->name, dest - symbol->address);
+        } else {
+            printf("%s %s, %d <%s>\n", instruction_name, get_register_name(rd), s_immediate, symbol->name);
+        }
+
     } else {
         b19_to_12 = b20 | b19_to_12 | b11 | b10_to_1;
-        Symbol* symbol = get_symbol(addr + b19_to_12);
-        printf("%s %s, %u  <%s>\n", instruction_name, get_register_name(rd), b19_to_12, symbol->name);
+        uintptr_t dest = addr + b19_to_12;
+        Symbol* symbol = get_symbol(dest);
+        if (dest - symbol->address != 0) {
+            printf("%s %s, %d <%s+0x%lx>\n", instruction_name, get_register_name(rd), b19_to_12, symbol->name, dest - symbol->address);
+        } else {
+            printf("%s %s, %d <%s>\n", instruction_name, get_register_name(rd), b19_to_12, symbol->name);
+        }
     }
 }
 
